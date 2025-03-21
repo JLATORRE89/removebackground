@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remove Background - {{ tier_features.title }} Plan</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .result-image {
+            max-width: 100%;
+            margin: 20px 0;
+        }
+        .download-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            gap: 30px;
+            width: 100%;
+        }
+        .download-item {
+            flex: 0 1 28%;
+            text-align: center;
+        }
+        .download-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            text-align: center;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .download-button:hover {
+            background-color: #218838;
+        }
+        .file-size {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
+        }
+        .resize-options {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .two-columns {
+            display: flex;
+            gap: 20px;
+        }
+        .column {
+            flex: 1;
+        }
+        .form-row {
+            margin-bottom: 8px;
+        }
+        .form-row.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .dimension-inputs {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            gap: 5px;
+        }
+        .dimension-inputs input {
+            width: 60px;
+            padding: 3px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        button[type="submit"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .warning {
+            color: #856404;
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #ffeeba;
+            font-size: 0.9em;
+        }
+        .original-dimensions {
+            text-align: center;
+            margin: 15px 0;
+            font-style: italic;
+        }
+        h4 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .tier-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .tier-info {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #6c757d;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .upgrade-message {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+    <script>
+        function toggleCustomSize() {
+            const resizeOption = document.querySelector('input[name="resize"]:checked').value;
+            const customInputs = document.getElementById('custom-size-inputs');
+            const upscaleWarning = document.getElementById('upscale-warning');
+            
+            if (resizeOption === 'custom') {
+                if (customInputs) {
+                    customInputs.style.display = 'flex';
+                }
+            } else {
+                if (customInputs) {
+                    customInputs.style.display = 'none';
+                }
+            }
+            
+            // Show warning for upscaling options
+            if (['720p', '1080p', '1440p', '4k', 'custom'].includes(resizeOption)) {
+                if (upscaleWarning) {
+                    upscaleWarning.style.display = 'block';
+                }
+            } else {
+                if (upscaleWarning) {
+                    upscaleWarning.style.display = 'none';
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Remove Background from image <span class="tier-badge">{{ tier_features.title }}</span></h1>
+    
+    <div class="tier-info">
+        Current plan: {{ tier_features.title }}
+        {% if tier == "t1" %}
+        <a href="/?tier=t2">Upgrade to Standard</a> or <a href="/?tier=t3">Upgrade to Premium</a>
+        {% elif tier == "t2" %}
+        <a href="/?tier=t3">Upgrade to Premium</a>
+        {% endif %}
+    </div>
+    
+    {% if error %}
+    <div class="error">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    {% if not image_data %}
+    <form method="post" enctype="multipart/form-data">
+        <div style="margin-bottom: 15px;">
+            <input type="file" name="image" accept="image/*" required>
+        </div>
+        <button type="submit" name="submit">Remove Background</button>
+    </form>
+    {% else %}
+    <form method="post" enctype="multipart/form-data">
+        <div class="resize-options">
+            <h3 style="text-align: center; margin-top: 0;">Resize Options</h3>
+            
+            <div class="two-columns">
+                <div class="column">
+                    <h4>Standard Sizes</h4>
+                    <div class="form-row">
+                        <input type="radio" id="size-original" name="resize" value="original" checked onchange="toggleCustomSize()">
+                        <label for="size-original">Original Size</label>
+                    </div>
+                    
+                    {% if 'half' in tier_features.resize_options %}
+                    <div class="form-row">
+                        <input type="radio" id="size-half" name="resize" value="half" onchange="toggleCustomSize()">
+                        <label for="size-half">Half Size (50%)</label>
+                    </div>
+                    {% else %}
+                    <div class="form-row disabled">
+                        <input type="radio" id="size-half" name="resize" value="half" disabled>
+                        <label for="size-half">Half Size (50%)</label>
+                    </div>
+                    {% endif %}
+                    
+                    {% if 'quarter' in tier_features.resize_options %}
+                    <div class="form-row">
+                        <input type="radio" id="size-quarter" name="resize" value="quarter" onchange="toggleCustomSize()">
+                        <label for="size-quarter">Quarter Size (25%)</label>
+                    </div>
+                    {% else %}
+                    <div class="form-row disabled">
+                        <input type="radio" id="size-quarter" name="resize" value="quarter" disabled>
+                        <label for="size-quarter">Quarter Size (25%)</label>
+                    </div>
+                    {% endif %}
+                    
+                    {% if 'custom' in tier_features.resize_options %}
+                    <div class="form-row">
+                        <input type="radio" id="size-custom" name="resize" value="custom" onchange="toggleCustomSize()">
+                        <label for="size-custom">Custom Size</label>
+                    </div>
+                    <div id="custom-size-inputs" class="dimension-inputs" style="display: none;">
+                        <label for="width">Width:</label>
+                        <input type="number" id="width" name="width" min="1" placeholder="width">
+                        <span>×</span>
+                        <label for="height">Height:</label>
+                        <input type="number" id="height" name="height" min="1" placeholder="height">
+                    </div>
+                    {% else %}
+                    <div class="form-row disabled">
+                        <input type="radio" id="size-custom" name="resize" value="custom" disabled>
+                        <label for="size-custom">Custom Size</label>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="column">
+                    <h4>Video Formats (Upscale)</h4>
+                    
+                    {% if tier_features.video_formats %}
+                        {% if '720p' in tier_features.video_formats %}
+                        <div class="form-row">
+                            <input type="radio" id="size-720p" name="resize" value="720p" onchange="toggleCustomSize()">
+                            <label for="size-720p">720p HD (1280×720)</label>
+                        </div>
+                        {% else %}
+                        <div class="form-row disabled">
+                            <input type="radio" id="size-720p" name="resize" value="720p" disabled>
+                            <label for="size-720p">720p HD (1280×720)</label>
+                        </div>
+                        {% endif %}
+                        
+                        {% if '1080p' in tier_features.video_formats %}
+                        <div class="form-row">
+                            <input type="radio" id="size-1080p" name="resize" value="1080p" onchange="toggleCustomSize()">
+                            <label for="size-1080p">1080p Full HD (1920×1080)</label>
+                        </div>
+                        {% else %}
+                        <div class="form-row disabled">
+                            <input type="radio" id="size-1080p" name="resize" value="1080p" disabled>
+                            <label for="size-1080p">1080p Full HD (1920×1080)</label>
+                        </div>
+                        {% endif %}
+                        
+                        {% if '1440p' in tier_features.video_formats %}
+                        <div class="form-row">
+                            <input type="radio" id="size-1440p" name="resize" value="1440p" onchange="toggleCustomSize()">
+                            <label for="size-1440p">1440p QHD (2560×1440)</label>
+                        </div>
+                        {% else %}
+                        <div class="form-row disabled">
+                            <input type="radio" id="size-1440p" name="resize" value="1440p" disabled>
+                            <label for="size-1440p">1440p QHD (2560×1440)</label>
+                        </div>
+                        {% endif %}
+                        
+                        {% if '4k' in tier_features.video_formats %}
+                        <div class="form-row">
+                            <input type="radio" id="size-4k" name="resize" value="4k" onchange="toggleCustomSize()">
+                            <label for="size-4k">4K UHD (3840×2160)</label>
+                        </div>
+                        {% else %}
+                        <div class="form-row disabled">
+                            <input type="radio" id="size-4k" name="resize" value="4k" disabled>
+                            <label for="size-4k">4K UHD (3840×2160)</label>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="upgrade-message">
+                            Video formats available in higher tier plans
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div id="upscale-warning" class="warning" style="display: none;">
+                <strong>Upscaling Notice:</strong> Increasing image size beyond original dimensions may result in reduced quality. The application cannot create new detail that wasn't in the original image.
+            </div>
+        </div>
+        
+        <button type="submit" name="resize_submit">Apply Resize</button>
+    </form>
+    
+    <button onclick="window.location.href='/'" style="margin-top: 10px; background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Upload New Image</button>
+    
+    {% if original_width and original_height %}
+        <p class="original-dimensions">
+            Original dimensions: {{ original_width }}×{{ original_height }} pixels
+        </p>
+    {% endif %}
+    
+    <div class="download-container">
+        {% if 'png' in tier_features.formats and download_links.png %}
+        <div class="download-item">
+            <a href="{{ download_links.png }}" download="remove_background.png" class="download-button">Download PNG</a>
+            <span class="file-size">{{ file_sizes.png }}</span>
+        </div>
+        {% endif %}
+        
+        {% if 'webp' in tier_features.formats and download_links.webp %}
+        <div class="download-item">
+            <a href="{{ download_links.webp }}" download="remove_background.webp" class="download-button">Download WebP</a>
+            <span class="file-size">{{ file_sizes.webp }}</span>
+        </div>
+        {% endif %}
+        
+        {% if 'jpeg' in tier_features.formats and download_links.jpeg %}
+        <div class="download-item">
+            <a href="{{ download_links.jpeg }}" download="remove_background.jpg" class="download-button">Download JPEG</a>
+            <span class="file-size">{{ file_sizes.jpeg }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <h2>Result</h2>
+    <img id="result-image" src="data:image/png;base64,{{ image_data }}" alt="Result" class="result-image">
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,6 @@
+Flask
+Pillow
+PyJWT
+rembg
+Werkzeug
+gunicorn

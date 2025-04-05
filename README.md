@@ -23,7 +23,7 @@ A Flask-based web application that removes backgrounds from images using the rem
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/background-removal-app.git
+   git clone https://github.com/JLATORRE89/background-removal-app.git
    cd background-removal-app
    ```
 

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>API Documentation - Background Removal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+      background-color: #f9f9f9;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    code {
+      background-color: #eee;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 90%;
+    }
+    pre {
+      background: #eee;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .tier-section {
+      background: #fff;
+      border-left: 5px solid #007bff;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Background Removal API</h1>
+  <p>This API allows users to upload images and receive a background-removed version in one or more formats.</p>
+
+  <h2>Endpoint</h2>
+  <p><code>POST /api/remove-background</code></p>
+
+  <h2>Authentication</h2>
+  <p>Include a JWT token in the <code>Authorization</code> header:</p>
+  <pre>
+Authorization: Bearer YOUR_JWT_TOKEN
+  </pre>
+
+  <h2>Request Parameters</h2>
+  <ul>
+    <li><code>image</code> (file) — required</li>
+    <li><code>resize</code> (string) — optional. Values: <code>original</code>, <code>half</code>, <code>quarter</code>, <code>custom</code>, <code>720p</code>, <code>1080p</code>, <code>1440p</code>, <code>4k</code></li>
+    <li><code>width</code> (int) — required if <code>resize=custom</code></li>
+    <li><code>height</code> (int) — required if <code>resize=custom</code></li>
+  </ul>
+
+  <h2>Example (Python)</h2>
+  <pre>
+import requests
+import jwt
+import datetime
+
+payload = {
+  'user_id': '123',
+  'username': 'demo_user',
+  'tier': 't2',
+  'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+}
+token = jwt.encode(payload, 'shared-secret-change-in-production', algorithm='HS256')
+
+headers = {'Authorization': f'Bearer {token}'}
+files = {'image': open('example.jpg', 'rb')}
+data = {'resize': 'original'}
+
+res = requests.post('http://localhost:5000/api/remove-background', headers=headers, files=files, data=data)
+print(res.json())
+  </pre>
+
+  <h2>Response</h2>
+  <pre>
+{
+  "status": "success",
+  "result_id": "uuid-string",
+  "image_data": {
+    "png": "base64string",
+    "webp": "base64string",
+    ...
+  },
+  "download_links": {
+    "png": "data:image/png;base64,...",
+    ...
+  },
+  "file_sizes": {
+    "png": "1.2 MB",
+    ...
+  },
+  "original_width": 1920,
+  "original_height": 1080,
+  "tier": "t2",
+  "username": "demo_user"
+}
+  </pre>
+
+  <h2>Tier Features</h2>
+
+  <div class="tier-section">
+    <h3>Basic (t1)</h3>
+    <ul>
+      <li>Formats: PNG, WebP</li>
+      <li>Resize: original, half, quarter</li>
+    </ul>
+  </div>
+
+  <div class="tier-section">
+    <h3>Standard (t2)</h3>
+    <ul>
+      <li>Formats: PNG, WebP</li>
+      <li>Resize: original, half, quarter, custom</li>
+      <li>Video sizes: 720p, 1080p</li>
+    </ul>
+  </div>
+
+  <div class="tier-section">
+    <h3>Premium (t3)</h3>
+    <ul>
+      <li>Formats: PNG, WebP, JPEG</li>
+      <li>Resize: original, half, quarter, custom</li>
+      <li>Video sizes: 720p, 1080p, 1440p, 4K</li>
+    </ul>
+  </div>
+
+  <footer style="text-align:center; font-size: 0.9em; color: #999;">
+    &copy; {{ current_year }} Background Removal App
+  </footer>
+
+</body>
+</html>

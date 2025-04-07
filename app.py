@@ -227,8 +227,123 @@ def cleanup_old_storage():
 # Direct access routes (for testing only)
 @app.route('/', methods=['GET'])
 def home():
-    """For direct access testing only - redirect to API documentation"""
+    tier = DEFAULT_TIER
+    tier_features = TIERS[tier]
+    return render_template('index.html', tier=tier, tier_features=tier_features)
+
+@app.route('/api_info', methods=['GET'])
+def api_info():  # ✅ different name
     return render_template('api_info.html')
+
+@app.route('/api', methods=['GET', 'POST'])
+def api_ui():
+    """JWT-protected web UI for the API with tier-based controls"""
+    error = None
+    image_data = None
+    download_links = {}
+    file_sizes = {}
+    original_width = None
+    original_height = None
+
+    # --- JWT authentication ---
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return "Unauthorized: Missing or invalid authorization header", 401
+
+    token = auth_header.split(' ')[1]
+    try:
+        payload = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=["HS256"])
+        username = payload.get('username', 'anonymous')
+        tier = payload.get('tier', DEFAULT_TIER)
+        if tier not in TIERS:
+            tier = DEFAULT_TIER
+        tier_features = TIERS[tier]
+    except jwt.ExpiredSignatureError:
+        return "Unauthorized: Token expired", 401
+    except jwt.InvalidTokenError:
+        return "Unauthorized: Invalid token", 401
+
+    if request.method == 'POST':
+        try:
+            image_file = request.files.get('image')
+            if not image_file or image_file.filename == '':
+                error = "Please upload an image."
+                return render_template('index.html', error=error, tier=tier, tier_features=tier_features)
+
+            file = image_file.read()
+            result_bytes = remove(file)
+            result = Image.open(BytesIO(result_bytes))
+
+            original_width, original_height = result.size
+            resize = request.form.get('resize', 'original')
+
+            # Resize logic
+            if resize == 'custom' and 'custom' in tier_features['resize_options']:
+                try:
+                    new_width = int(request.form.get('width'))
+                    new_height = int(request.form.get('height'))
+                    if new_width > 0 and new_height > 0:
+                        result = result.resize((new_width, new_height), Image.LANCZOS)
+                except Exception:
+                    pass
+            elif resize == 'half' and 'half' in tier_features['resize_options']:
+                result = result.resize((original_width // 2, original_height // 2), Image.LANCZOS)
+            elif resize == 'quarter' and 'quarter' in tier_features['resize_options']:
+                result = result.resize((original_width // 4, original_height // 4), Image.LANCZOS)
+            elif resize == '720p' and '720p' in tier_features['video_formats']:
+                result = result.resize((1280, 720), Image.LANCZOS)
+            elif resize == '1080p' and '1080p' in tier_features['video_formats']:
+                result = result.resize((1920, 1080), Image.LANCZOS)
+            elif resize == '1440p' and '1440p' in tier_features['video_formats']:
+                result = result.resize((2560, 1440), Image.LANCZOS)
+            elif resize == '4k' and '4k' in tier_features['video_formats']:
+                result = result.resize((3840, 2160), Image.LANCZOS)
+
+            # Format outputs
+            if 'png' in tier_features['formats']:
+                png_io = BytesIO()
+                result.save(png_io, 'PNG')
+                png_io.seek(0)
+                file_sizes['png'] = format_size(len(png_io.getvalue()))
+                png_data = base64.b64encode(png_io.getvalue()).decode('utf-8')
+                download_links['png'] = f"data:image/png;base64,{png_data}"
+
+            if 'webp' in tier_features['formats']:
+                webp_io = BytesIO()
+                result.save(webp_io, 'WEBP', quality=90)
+                webp_io.seek(0)
+                file_sizes['webp'] = format_size(len(webp_io.getvalue()))
+                webp_data = base64.b64encode(webp_io.getvalue()).decode('utf-8')
+                download_links['webp'] = f"data:image/webp;base64,{webp_data}"
+
+            if 'jpeg' in tier_features['formats']:
+                if result.mode == 'RGBA':
+                    jpeg_image = Image.new('RGB', result.size, (255, 255, 255))
+                    jpeg_image.paste(result, (0, 0), result)
+                else:
+                    jpeg_image = result.convert('RGB')
+                jpeg_io = BytesIO()
+                jpeg_image.save(jpeg_io, 'JPEG', quality=90)
+                jpeg_io.seek(0)
+                file_sizes['jpeg'] = format_size(len(jpeg_io.getvalue()))
+                jpeg_data = base64.b64encode(jpeg_io.getvalue()).decode('utf-8')
+                download_links['jpeg'] = f"data:image/jpeg;base64,{jpeg_data}"
+
+            image_data = png_data if 'png' in tier_features['formats'] else None
+
+        except Exception as e:
+            error = f"An error occurred: {str(e)}"
+
+    return render_template('index.html',
+                           error=error,
+                           image_data=image_data,
+                           download_links=download_links,
+                           file_sizes=file_sizes,
+                           original_width=original_width,
+                           original_height=original_height,
+                           tier=tier,
+                           tier_features=tier_features)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

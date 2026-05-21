@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session
+from flask import abort, Flask, request, jsonify, render_template, redirect, url_for, session
 from rembg import remove
 from PIL import Image, UnidentifiedImageError
 from io import BytesIO
@@ -10,6 +10,41 @@ import jwt
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+SENSITIVE_PUBLIC_EXTENSIONS = (
+
+    '.db', '.sqlite', '.sqlite3', '.sql', '.log',
+
+    '.tar', '.gz', '.zip', '.bak', '.backup',
+
+)
+
+
+
+@app.before_request
+
+def block_sensitive_public_paths():
+
+    path = request.path.lower()
+
+    if (
+
+        path == '/.env'
+
+        or path.startswith('/.env.')
+
+        or path.startswith('/.git')
+
+        or path.startswith('/logs/')
+
+        or path.startswith('/backup')
+
+        or path.endswith(SENSITIVE_PUBLIC_EXTENSIONS)
+
+    ):
+
+        abort(404)
+
 app.secret_key = os.urandom(24)
 
 # Configuration
